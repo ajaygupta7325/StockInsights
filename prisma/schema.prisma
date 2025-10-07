@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String      @id @default(uuid())
+  clerkId     String      @unique
+  email       String      @unique
+  name        String?
+  portfolios  Portfolio[]
+  createdAt   DateTime    @default(now())
+}
+
+model Portfolio {
+  id           String   @id @default(uuid())
+  userId       String
+  symbol       String
+  quantity     Int
+  avgPrice     Float
+  currentPrice Float?
+  createdAt    DateTime @default(now())
+
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([symbol])
+}
+
+model Prediction {
+  id             String   @id @default(uuid())
+  symbol         String
+  predictedPrice Float
+  confidence     Float
+  createdAt      DateTime @default(now())
+
+  @@index([symbol])
+}

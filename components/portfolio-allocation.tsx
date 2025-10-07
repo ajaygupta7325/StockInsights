@@ -51,4 +51,3 @@ export function PortfolioAllocation() {
     </div>
   )
 }
-

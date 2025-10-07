@@ -129,4 +129,3 @@ export function PredictionChart({ stockSymbol, timeframe }: PredictionChartProps
     </ResponsiveContainer>
   )
 }
-

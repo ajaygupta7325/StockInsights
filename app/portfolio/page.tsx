@@ -1,18 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
 import {
-  ArrowUpRight,
   ChevronDown,
   ChevronsUpDown,
   Clock,
   DollarSign,
-  LineChart,
-  PieChart,
-  Plus,
+  Edit,
+  Save,
   Search,
   Settings,
+  Trash2,
   TrendingDown,
   TrendingUp,
 } from "lucide-react"
@@ -21,14 +21,83 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PortfolioPerformance } from "@/components/portfolio-performance"
-import { PortfolioAllocation } from "@/components/portfolio-allocation"
+import { PortfolioPerformanceLive } from "@/components/portfolio-performance-live"
+import { PortfolioForm } from "@/components/portfolio-form"
+import { AuthSync } from "@/components/auth-sync"
+
+type Item = {
+  id: string
+  symbol: string
+  quantity: number
+  avgPrice: number
+  currentPrice?: number | null
+  createdAt: string
+}
 
 export default function Portfolio() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [items, setItems] = useState<Item[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState<Partial<Item>>({})
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/portfolio")
+      if (!res.ok) throw new Error("Failed to load portfolio")
+      const json = await res.json()
+      setItems(json.items)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const filtered = useMemo(
+    () => items.filter((i) => i.symbol.toLowerCase().includes(searchQuery.toLowerCase())),
+    [items, searchQuery],
+  )
+
+  const beginEdit = (row: Item) => {
+    setEditingId(row.id)
+    setEditDraft({ symbol: row.symbol, quantity: row.quantity, avgPrice: row.avgPrice })
+  }
+
+  const saveEdit = async (id: string) => {
+    try {
+      const res = await fetch(`/api/portfolio/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editDraft),
+      })
+      if (res.ok) {
+        await load()
+        setEditingId(null)
+        setEditDraft({})
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const remove = async (id: string) => {
+    try {
+      const res = await fetch(`/api/portfolio/${id}`, { method: "DELETE" })
+      if (res.ok) {
+        setItems((prev) => prev.filter((x) => x.id !== id))
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
+      <AuthSync />
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center">
           <div className="mr-4 hidden md:flex">
@@ -38,9 +107,6 @@ export default function Portfolio() {
             <nav className="flex items-center space-x-6 text-sm font-medium">
               <Link href="/dashboard" className="transition-colors hover:text-foreground/80">
                 Dashboard
-              </Link>
-              <Link href="/stocks" className="transition-colors hover:text-foreground/80">
-                Stocks
               </Link>
               <Link href="/analysis" className="transition-colors hover:text-foreground/80">
                 Analysis
@@ -65,238 +131,105 @@ export default function Portfolio() {
                 />
               </div>
             </div>
-            <Button className="h-8">Profile</Button>
+            <div className="ml-2">
+              <SignedIn>
+                <UserButton afterSignOutUrl="/" />
+              </SignedIn>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button className="h-8">Sign In</Button>
+                </SignInButton>
+              </SignedOut>
+            </div>
           </div>
         </div>
       </header>
+
       <main className="flex-1 space-y-4 p-4 md:p-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">Portfolio</h1>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-8 gap-1">
+            <Button variant="outline" size="sm" className="h-8 gap-1 bg-transparent">
               <Clock className="h-4 w-4" />
-              Last updated: 5 mins ago
+              Last updated: {new Date().toLocaleTimeString()}
             </Button>
-            <Button variant="outline" size="sm" className="h-8 gap-1">
+            <Button variant="outline" size="sm" className="h-8 gap-1 bg-transparent">
               <Settings className="h-4 w-4" />
               Settings
             </Button>
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">$124,568.00</div>
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                <p className="text-xs text-green-500">+12.5% YTD</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Daily Change</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">+$1,245.32</div>
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                <p className="text-xs text-green-500">+1.01% today</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Return</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">+$24,568.00</div>
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                <p className="text-xs text-green-500">+24.6% all time</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cash Balance</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">$15,432.00</div>
-              <div className="flex items-center space-x-2">
-                <p className="text-xs text-muted-foreground">12.4% of portfolio</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview" className="flex items-center gap-2">
-              <LineChart className="h-4 w-4" />
-              Portfolio Overview
-            </TabsTrigger>
-            <TabsTrigger value="allocation" className="flex items-center gap-2">
-              <PieChart className="h-4 w-4" />
-              Asset Allocation
+              <DollarSign className="h-4 w-4" />
+              Overview
             </TabsTrigger>
             <TabsTrigger value="holdings" className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
+              <ChevronsUpDown className="h-4 w-4" />
               Holdings
             </TabsTrigger>
           </TabsList>
+
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-              <Card className="lg:col-span-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
                 <CardHeader>
                   <CardTitle>Portfolio Performance</CardTitle>
-                  <CardDescription>Your portfolio performance over the last 6 months</CardDescription>
+                  <CardDescription>Computed from your holdings</CardDescription>
                 </CardHeader>
                 <CardContent className="pl-2">
-                  <PortfolioPerformance />
-                </CardContent>
-              </Card>
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>Top Holdings</CardTitle>
-                  <CardDescription>Your best performing stocks</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">AAPL</p>
-                        <p className="text-xs text-muted-foreground">Apple Inc.</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-green-500">+24.5%</p>
-                        <ArrowUpRight className="h-4 w-4 text-green-500" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">MSFT</p>
-                        <p className="text-xs text-muted-foreground">Microsoft Corporation</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-green-500">+18.2%</p>
-                        <ArrowUpRight className="h-4 w-4 text-green-500" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">NVDA</p>
-                        <p className="text-xs text-muted-foreground">NVIDIA Corporation</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-green-500">+45.7%</p>
-                        <ArrowUpRight className="h-4 w-4 text-green-500" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">AMZN</p>
-                        <p className="text-xs text-muted-foreground">Amazon.com, Inc.</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-green-500">+12.3%</p>
-                        <ArrowUpRight className="h-4 w-4 text-green-500" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">GOOGL</p>
-                        <p className="text-xs text-muted-foreground">Alphabet Inc.</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-red-500">-2.1%</p>
-                        <TrendingDown className="h-4 w-4 text-red-500" />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            <div className="flex justify-end">
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Investment
-              </Button>
-            </div>
-          </TabsContent>
-          <TabsContent value="allocation" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>Asset Allocation</CardTitle>
-                  <CardDescription>Breakdown of your portfolio by asset class</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <PortfolioAllocation />
+                  <PortfolioPerformanceLive />
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle>Allocation Details</CardTitle>
-                  <CardDescription>Detailed breakdown by category</CardDescription>
+                  <CardTitle>Summary</CardTitle>
+                  <CardDescription>Change estimates</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">Technology</p>
-                      </div>
-                      <p className="text-sm">45.2%</p>
+                      <span>Total holdings</span>
+                      <span className="text-sm">{items.length}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">Healthcare</p>
-                      </div>
-                      <p className="text-sm">15.8%</p>
+                      <span>Winners today</span>
+                      <span className="text-sm text-green-600 flex items-center gap-1">
+                        <TrendingUp className="h-4 w-4" /> —
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">Financials</p>
-                      </div>
-                      <p className="text-sm">12.4%</p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">Consumer Discretionary</p>
-                      </div>
-                      <p className="text-sm">8.7%</p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">Cash</p>
-                      </div>
-                      <p className="text-sm">12.4%</p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">Other</p>
-                      </div>
-                      <p className="text-sm">5.5%</p>
+                      <span>Losers today</span>
+                      <span className="text-sm text-red-600 flex items-center gap-1">
+                        <TrendingDown className="h-4 w-4" /> —
+                      </span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
+
           <TabsContent value="holdings" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Add Investment</CardTitle>
+                <CardDescription>Create a new portfolio entry</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PortfolioForm onCreated={load} />
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Holdings</CardTitle>
                   <CardDescription>All stocks in your portfolio</CardDescription>
                 </div>
-                <Button variant="outline" size="sm" className="h-8 gap-1">
+                <Button variant="outline" size="sm" className="h-8 gap-1 bg-transparent">
                   <ChevronsUpDown className="h-4 w-4" />
                   Filter
                   <ChevronDown className="h-3 w-3 opacity-50" />
@@ -304,55 +237,81 @@ export default function Portfolio() {
               </CardHeader>
               <CardContent>
                 <div className="rounded-md border">
-                  <div className="grid grid-cols-5 border-b px-4 py-3 font-medium">
+                  <div className="grid grid-cols-6 border-b px-4 py-3 font-medium">
                     <div>Symbol</div>
                     <div>Shares</div>
                     <div>Avg. Cost</div>
                     <div>Current Price</div>
-                    <div>Total Return</div>
+                    <div>Actions</div>
+                    <div className="text-right">Created</div>
                   </div>
-                  <div className="grid grid-cols-5 border-b px-4 py-3">
-                    <div className="font-medium">AAPL</div>
-                    <div>50</div>
-                    <div>$150.25</div>
-                    <div>$198.45</div>
-                    <div className="text-green-500">+32.1%</div>
-                  </div>
-                  <div className="grid grid-cols-5 border-b px-4 py-3">
-                    <div className="font-medium">MSFT</div>
-                    <div>30</div>
-                    <div>$280.50</div>
-                    <div>$340.25</div>
-                    <div className="text-green-500">+21.3%</div>
-                  </div>
-                  <div className="grid grid-cols-5 border-b px-4 py-3">
-                    <div className="font-medium">NVDA</div>
-                    <div>20</div>
-                    <div>$450.75</div>
-                    <div>$820.30</div>
-                    <div className="text-green-500">+82.0%</div>
-                  </div>
-                  <div className="grid grid-cols-5 border-b px-4 py-3">
-                    <div className="font-medium">AMZN</div>
-                    <div>15</div>
-                    <div>$130.20</div>
-                    <div>$145.30</div>
-                    <div className="text-green-500">+11.6%</div>
-                  </div>
-                  <div className="grid grid-cols-5 border-b px-4 py-3">
-                    <div className="font-medium">GOOGL</div>
-                    <div>25</div>
-                    <div>$140.50</div>
-                    <div>$137.80</div>
-                    <div className="text-red-500">-1.9%</div>
-                  </div>
-                  <div className="grid grid-cols-5 px-4 py-3">
-                    <div className="font-medium">JNJ</div>
-                    <div>40</div>
-                    <div>$160.30</div>
-                    <div>$155.20</div>
-                    <div className="text-red-500">-3.2%</div>
-                  </div>
+                  {loading ? (
+                    <div className="px-4 py-6 text-sm text-muted-foreground">Loading...</div>
+                  ) : filtered.length === 0 ? (
+                    <div className="px-4 py-6 text-sm text-muted-foreground">No holdings yet.</div>
+                  ) : (
+                    filtered.map((row) => {
+                      const isEditing = editingId === row.id
+                      return (
+                        <div className="grid grid-cols-6 border-b px-4 py-3" key={row.id}>
+                          <div className="font-medium">
+                            {isEditing ? (
+                              <Input
+                                value={editDraft.symbol ?? ""}
+                                onChange={(e) => setEditDraft((d) => ({ ...d, symbol: e.target.value.toUpperCase() }))}
+                              />
+                            ) : (
+                              row.symbol
+                            )}
+                          </div>
+                          <div>
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                value={String(editDraft.quantity ?? "")}
+                                onChange={(e) => setEditDraft((d) => ({ ...d, quantity: Number(e.target.value) || 0 }))}
+                              />
+                            ) : (
+                              row.quantity
+                            )}
+                          </div>
+                          <div>
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={String(editDraft.avgPrice ?? "")}
+                                onChange={(e) => setEditDraft((d) => ({ ...d, avgPrice: Number(e.target.value) || 0 }))}
+                              />
+                            ) : (
+                              `$${row.avgPrice.toFixed(2)}`
+                            )}
+                          </div>
+                          <div>{row.currentPrice ? `$${row.currentPrice.toFixed(2)}` : "—"}</div>
+                          <div className="flex items-center gap-2">
+                            {isEditing ? (
+                              <Button size="sm" onClick={() => saveEdit(row.id)} className="gap-1">
+                                <Save className="h-4 w-4" />
+                                Save
+                              </Button>
+                            ) : (
+                              <Button size="sm" variant="outline" onClick={() => beginEdit(row)} className="gap-1">
+                                <Edit className="h-4 w-4" />
+                                Edit
+                              </Button>
+                            )}
+                            <Button size="sm" variant="destructive" onClick={() => remove(row.id)} className="gap-1">
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </Button>
+                          </div>
+                          <div className="text-right text-sm text-muted-foreground">
+                            {new Date(row.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -362,4 +321,3 @@ export default function Portfolio() {
     </div>
   )
 }
-

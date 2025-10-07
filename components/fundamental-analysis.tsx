@@ -48,4 +48,3 @@ export function FundamentalAnalysis({ stockSymbol }: FundamentalAnalysisProps) {
     </div>
   )
 }
-

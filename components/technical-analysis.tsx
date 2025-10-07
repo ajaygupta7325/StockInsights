@@ -68,4 +68,3 @@ export function TechnicalAnalysis({ stockSymbol }: TechnicalAnalysisProps) {
     </div>
   )
 }
-

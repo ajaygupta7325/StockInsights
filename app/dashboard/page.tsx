@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
   ArrowUpRight,
@@ -16,6 +16,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -24,12 +25,66 @@ import { MarketOverview } from "@/components/market-overview"
 import { StockChart } from "@/components/stock-chart"
 import { TopPerformers } from "@/components/top-performers"
 import { MarketNews } from "@/components/market-news"
+import LiveAndPrediction from "./_components/live-and-prediction"
+import { AuthSync } from "@/components/auth-sync"
+
+type TickerQuote = {
+  provider: string
+  symbol: string
+  price: number
+  change: number
+  changePercent: number
+}
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [spx, setSpx] = useState<TickerQuote | null>(null)
+  const [dow, setDow] = useState<TickerQuote | null>(null)
+  const [nas, setNas] = useState<TickerQuote | null>(null)
+  const [rut, setRut] = useState<TickerQuote | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const [a, b, c, d] = await Promise.all([
+          fetch("/api/stocks?symbol=SPY").then((r) => r.json()),
+          fetch("/api/stocks?symbol=DIA").then((r) => r.json()),
+          fetch("/api/stocks?symbol=QQQ").then((r) => r.json()),
+          fetch("/api/stocks?symbol=IWM").then((r) => r.json()),
+        ])
+        if (!cancelled) {
+          setSpx({ ...a, symbol: "S&P 500" })
+          setDow({ ...b, symbol: "Dow Jones" })
+          setNas({ ...c, symbol: "NASDAQ" })
+          setRut({ ...d, symbol: "Russell 2000" })
+        }
+      } catch (e) {
+        // Keep silent; cards will show placeholders
+      }
+    }
+    load()
+    const id = setInterval(load, 60_000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [])
+
+  const tiles = useMemo(
+    () =>
+      [
+        spx ?? { symbol: "S&P 500", price: 0, change: 0, changePercent: 0 },
+        dow ?? { symbol: "Dow Jones", price: 0, change: 0, changePercent: 0 },
+        nas ?? { symbol: "NASDAQ", price: 0, change: 0, changePercent: 0 },
+        rut ?? { symbol: "Russell 2000", price: 0, change: 0, changePercent: 0 },
+      ] as TickerQuote[],
+    [spx, dow, nas, rut],
+  )
 
   return (
     <div className="flex min-h-screen flex-col">
+      <AuthSync />
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center">
           <div className="mr-4 hidden md:flex">
@@ -39,9 +94,6 @@ export default function Dashboard() {
             <nav className="flex items-center space-x-6 text-sm font-medium">
               <Link href="/dashboard" className="text-primary transition-colors hover:text-primary/80">
                 Dashboard
-              </Link>
-              <Link href="/stocks" className="transition-colors hover:text-foreground/80">
-                Stocks
               </Link>
               <Link href="/analysis" className="transition-colors hover:text-foreground/80">
                 Analysis
@@ -66,7 +118,16 @@ export default function Dashboard() {
                 />
               </div>
             </div>
-            <Button className="h-8">Profile</Button>
+            <div className="ml-2">
+              <SignedIn>
+                <UserButton afterSignOutUrl="/" />
+              </SignedIn>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button className="h-8">Sign In</Button>
+                </SignInButton>
+              </SignedOut>
+            </div>
           </div>
         </div>
       </header>
@@ -74,71 +135,47 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-8 gap-1">
+            <Button variant="outline" size="sm" className="h-8 gap-1 bg-transparent">
               <Clock className="h-4 w-4" />
-              Last updated: 5 mins ago
+              Last updated: 1 min ago
             </Button>
-            <Button variant="outline" size="sm" className="h-8 gap-1">
+            <Button variant="outline" size="sm" className="h-8 gap-1 bg-transparent">
               <ChevronsUpDown className="h-4 w-4" />
               Filter
               <ChevronDown className="h-3 w-3 opacity-50" />
             </Button>
           </div>
         </div>
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">S&P 500</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">4,783.45</div>
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                <p className="text-xs text-green-500">+1.2% (57.28)</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Dow Jones</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">38,239.98</div>
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                <p className="text-xs text-green-500">+0.8% (305.91)</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">NASDAQ</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">16,742.39</div>
-              <div className="flex items-center space-x-2">
-                <TrendingDown className="h-4 w-4 text-red-500" />
-                <p className="text-xs text-red-500">-0.3% (50.22)</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Russell 2000</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">2,042.57</div>
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                <p className="text-xs text-green-500">+1.5% (30.63)</p>
-              </div>
-            </CardContent>
-          </Card>
+          {tiles.map((t, idx) => (
+            <Card key={idx}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t.symbol}</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{t.price ? t.price.toFixed(2) : "—"}</div>
+                <div className="flex items-center space-x-2">
+                  {t.change >= 0 ? (
+                    <>
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <p className="text-xs text-green-500">+{t.changePercent?.toFixed(2)}%</p>
+                    </>
+                  ) : (
+                    <>
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                      <p className="text-xs text-red-500">{t.changePercent?.toFixed(2)}%</p>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+
+        <LiveAndPrediction symbol="NASDAQ:AAPL" />
+
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview" className="flex items-center gap-2">
@@ -310,7 +347,6 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[400px] w-full">
-                    {/* Sector analysis chart would go here */}
                     <div className="flex h-full items-center justify-center">
                       <p className="text-muted-foreground">Sector analysis visualization</p>
                     </div>
@@ -324,4 +360,3 @@ export default function Dashboard() {
     </div>
   )
 }
-
