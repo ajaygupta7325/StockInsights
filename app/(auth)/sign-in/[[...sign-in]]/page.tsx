@@ -5,7 +5,7 @@ import Image from "next/image"
 
 export default function Page() {
   return (
-    <div className="min-h-svh grid grid-cols-1 lg:grid-cols-2">
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       <div className="relative hidden lg:block">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-700" />
         <Image

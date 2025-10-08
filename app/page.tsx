@@ -1,10 +1,15 @@
+"use client"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
+
+
 export default function Home() {
+  const router = useRouter()
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -33,7 +38,7 @@ export default function Home() {
           </div>
           <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
             <div className="w-full flex-1 md:w-auto md:flex-none">
-              <Button variant="outline" className="ml-auto hidden h-8 md:flex">
+              <Button variant="outline" className="ml-auto hidden h-8 md:flex"  onClick={() => router.push("/sign-in")}>
                 Sign In
               </Button>
             </div>

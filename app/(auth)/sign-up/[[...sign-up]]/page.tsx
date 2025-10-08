@@ -3,6 +3,7 @@
 import { SignUp } from "@clerk/nextjs"
 import Image from "next/image"
 
+
 export default function Page() {
   return (
     <div className="min-h-svh grid grid-cols-1 lg:grid-cols-2">
