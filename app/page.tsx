@@ -16,7 +16,7 @@ export default function Home() {
         <div className="container flex h-14 items-center">
           <div className="mr-4 hidden md:flex">
             <Link href="/" className="mr-6 flex items-center space-x-2">
-              <span className="hidden font-bold sm:inline-block">StockInsight</span>
+              <span className="hidden font-bold p-5 sm:inline-block">StockInsight</span>
             </Link>
             <nav className="flex items-center space-x-6 text-sm font-medium">
               <Link href="/dashboard" className="transition-colors hover:text-foreground/80">
@@ -38,7 +38,7 @@ export default function Home() {
           </div>
           <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
             <div className="w-full flex-1 md:w-auto md:flex-none">
-              <Button variant="outline" className="ml-auto hidden h-8 md:flex"  onClick={() => router.push("/sign-in")}>
+              <Button variant="outline" className="ml-auto hidden h-8 md:flex " onClick={() => router.push("/sign-in")}>
                 Sign In
               </Button>
             </div>
@@ -74,13 +74,19 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
-              <img
-                src="/placeholder.svg?height=550&width=800"
-                alt="Stock Market Dashboard"
+              <video
+                src="/bodyy.mp4"
                 width={550}
                 height={800}
                 className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
-              />
+                autoPlay
+                loop
+                muted
+                playsInline
+              >
+                Your browser does not support the video tag.
+              </video>
+
             </div>
           </div>
         </section>
