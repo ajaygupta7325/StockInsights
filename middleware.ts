@@ -10,25 +10,47 @@ const isPublicRoute = createRouteMatcher([
   "/api/predictions(.*)",
 ])
 
-export default clerkMiddleware((auth, req) => {
+export default clerkMiddleware(async (auth, req) => {
   // Allow public routes through
   if (isPublicRoute(req)) return
 
-  // For protected routes, redirect to sign-in if not authenticated
-  const { userId } = auth()
-  if (!userId) {
-    const url = new URL("/sign-in", req.url)
-    // Optional: preserve intended URL to support post-login redirect
-    url.searchParams.set("redirect_url", req.url)
-    return NextResponse.redirect(url)
+  try {
+    // For protected routes, redirect to sign-in if not authenticated
+    const { userId } = await auth()
+    if (!userId) {
+      const signInUrl = new URL("/sign-in", req.url)
+      // Preserve the intended URL for post-login redirect
+      const returnUrl = req.url
+      signInUrl.searchParams.set("redirect_url", returnUrl)
+      return NextResponse.redirect(signInUrl)
+    }
+    
+    // User is authenticated, allow the request to proceed
+    return NextResponse.next()
+  } catch (error) {
+    console.error("Auth error:", error)
+    // If there's an error, redirect to sign-in as a fallback
+    return NextResponse.redirect(new URL("/sign-in", req.url))
   }
 })
 
+// Match all paths that should be protected
+const protectedPaths = [
+  "/portfolio(.*)",
+  "/dashboard(.*)",
+  "/analysis(.*)",
+  "/api/portfolio(.*)",
+  "/api/auth(.*)",
+]
+
 export const config = {
   matcher: [
-    // Run middleware on all routes except static files and _next
-    "/((?!.+\\..+|_next).*)",
-    "/",
-    "/(api|trpc)(.*)",
+    // Only run middleware on explicitly protected paths to avoid
+    // intercepting Next.js static assets, _next paths, and public routes.
+    "/portfolio(.*)",
+    "/dashboard(.*)",
+    "/analysis(.*)",
+    "/api/portfolio(.*)",
+    "/api/auth(.*)",
   ],
 }

@@ -40,14 +40,22 @@ export default function Portfolio() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState<Partial<Item>>({})
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    setError(null)
     setLoading(true)
     try {
       const res = await fetch("/api/portfolio")
-      if (!res.ok) throw new Error("Failed to load portfolio")
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || "Failed to load portfolio")
+      }
       const json = await res.json()
       setItems(json.items)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load portfolio")
+      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -97,8 +105,7 @@ export default function Portfolio() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <AuthSync />
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="container flex h-14 items-center">
           <div className="mr-4 hidden md:flex">
             <Link href="/" className="mr-6 flex items-center space-x-2">
@@ -110,6 +117,9 @@ export default function Portfolio() {
               </Link>
               <Link href="/analysis" className="transition-colors hover:text-foreground/80">
                 Analysis
+              </Link>
+              <Link href="/stocks" className="text-primary transition-colors hover:text-primary/80">
+                Stocks
               </Link>
               <Link href="/portfolio" className="text-primary transition-colors hover:text-primary/80">
                 Portfolio
@@ -144,7 +154,6 @@ export default function Portfolio() {
           </div>
         </div>
       </header>
-
       <main className="flex-1 space-y-4 p-4 md:p-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">Portfolio</h1>
@@ -247,6 +256,8 @@ export default function Portfolio() {
                   </div>
                   {loading ? (
                     <div className="px-4 py-6 text-sm text-muted-foreground">Loading...</div>
+                  ) : error ? (
+                    <div className="px-4 py-6 text-sm text-red-500">{error}</div>
                   ) : filtered.length === 0 ? (
                     <div className="px-4 py-6 text-sm text-muted-foreground">No holdings yet.</div>
                   ) : (

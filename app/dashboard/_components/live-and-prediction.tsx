@@ -16,7 +16,7 @@ export default function LiveAndPrediction({
           <CardTitle>Live Chart ({symbol})</CardTitle>
         </CardHeader>
         <CardContent>
-          <StockChart symbol={symbol} theme="light" height={420} />
+          <StockChart stockSymbol={symbol} theme="light" height={420} />
         </CardContent>
       </Card>
       <Card>

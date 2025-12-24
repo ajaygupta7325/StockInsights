@@ -19,7 +19,7 @@ const data = [
   { date: "2024-06", value: 198 },
 ]
 
-export function StockChart() {
+export function StockChart({ symbol }: { symbol?: string }) {
   return (
     <ResponsiveContainer width="100%" height={350}>
       <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>

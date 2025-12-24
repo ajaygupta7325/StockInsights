@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs/server"
+import { NextRequest, NextResponse } from "next/server"
+import { getAuth } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/db"
 import { updatePortfolioSchema, type UpdatePortfolioInput } from "@/lib/validators"
 
@@ -9,15 +9,21 @@ import { updatePortfolioSchema, type UpdatePortfolioInput } from "@/lib/validato
  * DELETE /api/portfolio/:id - delete item
  */
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+type Context = {
+  params: { id: string }
+}
+
+export async function GET(request: NextRequest, context: Context) {
   try {
-    const { userId } = auth()
+    const { userId } = getAuth(request)
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const appUser = await prisma.user.findUnique({ where: { clerkId: userId } })
-    if (!appUser) return NextResponse.json({ error: "User not found" }, { status: 404 })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
-    const item = await prisma.portfolio.findFirst({ where: { id: params.id, userId: appUser.id } })
+    const item = await prisma.portfolio.findFirst({
+      where: { id: context.params.id, userId: user.id }
+    })
     if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
     return NextResponse.json({ item })
@@ -27,25 +33,25 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: Context) {
   try {
-    const { userId } = auth()
+    const { userId } = getAuth(request)
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const appUser = await prisma.user.findUnique({ where: { clerkId: userId } })
-    if (!appUser) return NextResponse.json({ error: "User not found" }, { status: 404 })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
-    const body = (await req.json()) as UpdatePortfolioInput
+    const body = await request.json()
     const parsed = updatePortfolioSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 })
     }
 
-    const existing = await prisma.portfolio.findFirst({ where: { id: params.id, userId: appUser.id } })
+    const existing = await prisma.portfolio.findFirst({ where: { id: context.params.id, userId: user.id } })
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
     const updated = await prisma.portfolio.update({
-      where: { id: params.id },
+      where: { id: context.params.id },
       data: parsed.data,
     })
     return NextResponse.json({ item: updated })
@@ -55,20 +61,20 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: Context) {
   try {
-    const { userId } = auth()
+    const { userId } = getAuth(request)
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const appUser = await prisma.user.findUnique({ where: { clerkId: userId } })
-    if (!appUser) return NextResponse.json({ error: "User not found" }, { status: 404 })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
     // Ensure ownership
-    const existing = await prisma.portfolio.findFirst({ where: { id: params.id, userId: appUser.id } })
+    const existing = await prisma.portfolio.findFirst({ where: { id: context.params.id, userId: user.id } })
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-    await prisma.portfolio.delete({ where: { id: params.id } })
-    return NextResponse.json({ ok: true })
+    await prisma.portfolio.delete({ where: { id: context.params.id } })
+    return NextResponse.json({ success: true })
   } catch (e) {
     console.error(e)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

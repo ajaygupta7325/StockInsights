@@ -22,7 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MarketOverview } from "@/components/market-overview"
-import { StockChart } from "@/components/stock-chart"
+import { StockChart } from "@/components/ui/stock-chart"
 import { TopPerformers } from "@/components/top-performers"
 import { MarketNews } from "@/components/market-news"
 import LiveAndPrediction from "./_components/live-and-prediction"
@@ -85,7 +85,7 @@ export default function Dashboard() {
   return (
     <div className="flex min-h-screen flex-col">
       <AuthSync />
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="container flex h-14 items-center">
           <div className="mr-4 hidden md:flex">
             <Link href="/" className="mr-6 flex items-center space-x-2">
@@ -97,6 +97,9 @@ export default function Dashboard() {
               </Link>
               <Link href="/analysis" className="transition-colors hover:text-foreground/80">
                 Analysis
+              </Link>
+              <Link href="/stocks" className="transition-colors hover:text-foreground/80">
+                Stocks
               </Link>
               <Link href="/portfolio" className="transition-colors hover:text-foreground/80">
                 Portfolio
@@ -219,7 +222,7 @@ export default function Dashboard() {
                   <CardDescription>Latest financial news and updates</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <MarketNews />
+                  <MarketNews stockSymbol="MARKET" />
                 </CardContent>
               </Card>
               <Card>
@@ -287,7 +290,7 @@ export default function Dashboard() {
                   <CardDescription>AAPL stock price over the last 6 months</CardDescription>
                 </CardHeader>
                 <CardContent className="pl-2">
-                  <StockChart />
+                  <StockChart stockSymbol="NASDAQ:AAPL" />
                 </CardContent>
               </Card>
               <Card>

@@ -1,6 +1,10 @@
 "use client"
 
-export function MarketNews() {
+interface MarketNewsProps {
+  stockSymbol: string
+}
+
+export function MarketNews({ stockSymbol }: MarketNewsProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">

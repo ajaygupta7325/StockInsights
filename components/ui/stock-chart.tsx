@@ -7,11 +7,11 @@
 import { useEffect, useRef } from "react"
 
 export function StockChart({
-  symbol = "NASDAQ:AAPL",
+  stockSymbol,
   theme = "light",
   height = 420,
 }: {
-  symbol?: string
+  stockSymbol: string
   theme?: "light" | "dark"
   height?: number
 }) {
@@ -29,7 +29,7 @@ export function StockChart({
     script.async = true
     script.innerHTML = JSON.stringify({
       autosize: true,
-      symbol,
+      symbol: stockSymbol,
       interval: "60",
       timezone: "Etc/UTC",
       theme,
@@ -45,7 +45,7 @@ export function StockChart({
     })
 
     container.current.appendChild(script)
-  }, [symbol, theme])
+  }, [stockSymbol, theme])
 
   return (
     <div className="w-full" style={{ height }}>

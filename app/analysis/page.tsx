@@ -17,7 +17,7 @@ export default function Analysis() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="container flex h-14 items-center">
           <div className="mr-4 hidden md:flex">
             <Link href="/" className="mr-6 flex items-center space-x-2">
@@ -27,11 +27,11 @@ export default function Analysis() {
               <Link href="/dashboard" className="transition-colors hover:text-foreground/80">
                 Dashboard
               </Link>
-              <Link href="/stocks" className="transition-colors hover:text-foreground/80">
-                Stocks
-              </Link>
               <Link href="/analysis" className="text-primary transition-colors hover:text-primary/80">
                 Analysis
+              </Link>
+              <Link href="/stocks" className="transition-colors hover:text-foreground/80">
+                Stocks
               </Link>
               <Link href="/portfolio" className="transition-colors hover:text-foreground/80">
                 Portfolio

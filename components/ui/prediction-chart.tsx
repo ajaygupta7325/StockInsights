@@ -5,9 +5,23 @@
  * When no backend data is provided, generates mock series for demo.
  */
 import { useEffect, useMemo, useRef } from "react"
-import { createChart, type ISeriesApi, type UTCTimestamp } from "lightweight-charts"
+import { createChart } from "lightweight-charts"
 
-type Point = { time: UTCTimestamp; value: number }
+type Point = { time: number; value: number }
+
+interface ChartPoint {
+  time: number;
+  value: number;
+}
+
+// Helper function to create a series
+const createSeries = (chart: any, color: string, isActual: boolean) => {
+  return chart.addLineSeries({
+    color: color,
+    lineWidth: 2,
+    lineStyle: isActual ? 0 : 1, // 0 for solid, 1 for dotted
+  })
+}
 
 function genMockSeries(days = 60) {
   const now = new Date()
@@ -19,7 +33,7 @@ function genMockSeries(days = 60) {
     d.setDate(now.getDate() - i)
     const noise = (Math.random() - 0.5) * 2
     v = Math.max(50, v + noise)
-    hist.push({ time: Math.floor(d.getTime() / 1000) as unknown as UTCTimestamp, value: Number(v.toFixed(2)) })
+    hist.push({ time: Math.floor(d.getTime() / 1000), value: Number(v.toFixed(2)) })
   }
   // Next 30 days predicted
   const last = hist[hist.length - 1]
@@ -30,7 +44,7 @@ function genMockSeries(days = 60) {
     const drift = 0.15
     const noise = (Math.random() - 0.5) * 1.5
     pv = Math.max(50, pv + drift + noise)
-    pred.push({ time: Math.floor(d.getTime() / 1000) as unknown as UTCTimestamp, value: Number(pv.toFixed(2)) })
+    pred.push({ time: Math.floor(d.getTime() / 1000), value: Number(pv.toFixed(2)) })
   }
   return { hist, pred }
 }
@@ -55,25 +69,31 @@ export function PredictionChart({
 
     const chart = createChart(containerRef.current, {
       height,
-      layout: { textColor: "#475569", background: { type: "solid", color: "transparent" } },
+      layout: { textColor: "#475569", background: { color: "transparent" } },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
       grid: { horzLines: { color: "#e2e8f0" }, vertLines: { color: "#f1f5f9" } },
       crosshair: { mode: 0 },
     })
 
-    const actualSeries: ISeriesApi<"Line"> = chart.addLineSeries({
+    const lineSeries = chart.addLineSeries({
       color: "#2563eb",
       lineWidth: 2,
     })
-    actualSeries.setData(data.hist)
+    lineSeries.setData(data.hist.map(point => ({
+      time: point.time as any,
+      value: point.value
+    })))
 
-    const predictedSeries: ISeriesApi<"Line"> = chart.addLineSeries({
+    const predictedSeries = chart.addLineSeries({
       color: "#10b981",
       lineWidth: 2,
-      lineStyle: 2, // dashed
+      lineStyle: 1,
     })
-    predictedSeries.setData(data.pred)
+    predictedSeries.setData(data.pred.map(point => ({
+      time: point.time as any,
+      value: point.value
+    })))
 
     // Fit content
     chart.timeScale().fitContent()
