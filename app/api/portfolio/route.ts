@@ -10,7 +10,7 @@ import { createPortfolioSchema, type CreatePortfolioInput } from "@/lib/validato
 
 export async function GET() {
   try {
-    const { userId } = auth()
+    const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const user = await prisma.user.findUnique({ where: { clerkId: userId } })
@@ -29,7 +29,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth()
+    const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const user = await prisma.user.findUnique({ where: { clerkId: userId } })
